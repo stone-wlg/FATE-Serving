@@ -114,7 +114,7 @@ module.exports = {
         // 查阅 https://github.com/vuejs/vue-docs-zh-cn/blob/master/vue-cli/cli-service.md#配置代理
         proxy: {
             '/api': {
-                target: 'http://172.16.153.47:8350',
+                target: 'http://172.16.153.105:8350',
                 changeOrigin: true,
                 pathRewrite: {
                     '^/api': '/api'
