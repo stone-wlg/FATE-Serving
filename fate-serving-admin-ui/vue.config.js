@@ -43,6 +43,7 @@ module.exports = {
     // 通过这个选项可以显式转译一个依赖。
     transpileDependencies: [
         /* string or regex */
+        // /[/\\]node_modules[/\\]echarts[/\\]/
     ],
 
     // 是否为生产环境构建生成 source map？
@@ -114,7 +115,7 @@ module.exports = {
         // 查阅 https://github.com/vuejs/vue-docs-zh-cn/blob/master/vue-cli/cli-service.md#配置代理
         proxy: {
             '/api': {
-                target: 'http://172.16.153.105:8350',
+                target: 'http://172.16.153.47:8350',
                 changeOrigin: true,
                 pathRewrite: {
                     '^/api': '/api'
