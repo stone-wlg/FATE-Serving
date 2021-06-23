@@ -62,8 +62,7 @@ public class RouterController {
 
     @PostMapping("/router/query")
     @ResponseBody
-    public ReturnResult queryModel(RouterTableServiceProto.RouterTableInfo routerTable, Integer page, Integer pageSize) throws Exception {
-        String serverHost = "10.35.27.23";int serverPort=8879;
+    public ReturnResult queryModel(String serverHost, int serverPort,RouterTableServiceProto.RouterTableInfo routerTable, Integer page, Integer pageSize) throws Exception {
         Preconditions.checkArgument(StringUtils.isNotBlank(serverHost), "parameter host is blank");
         Preconditions.checkArgument(serverPort != 0, "parameter port is blank");
         if (page == null || page < 0) {
