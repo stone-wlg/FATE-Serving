@@ -19,7 +19,6 @@ package com.webank.ai.fate.serving.proxy.rpc.services;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.webank.ai.fate.api.networking.proxy.DataTransferServiceGrpc;
 import com.webank.ai.fate.api.networking.proxy.Proxy;
@@ -28,6 +27,7 @@ import com.webank.ai.fate.serving.common.rpc.core.FateService;
 import com.webank.ai.fate.serving.common.rpc.core.InboundPackage;
 import com.webank.ai.fate.serving.common.rpc.core.OutboundPackage;
 import com.webank.ai.fate.serving.common.utils.HttpClientPool;
+import com.webank.ai.fate.serving.common.utils.HttpsClient;
 import com.webank.ai.fate.serving.core.bean.*;
 import com.webank.ai.fate.serving.core.exceptions.*;
 import com.webank.ai.fate.serving.core.rpc.router.Protocol;
@@ -35,7 +35,6 @@ import com.webank.ai.fate.serving.core.rpc.router.RouterInfo;
 import com.webank.ai.fate.serving.core.utils.JsonUtil;
 import com.webank.ai.fate.serving.proxy.security.AuthUtils;
 import io.grpc.ManagedChannel;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,11 +112,18 @@ public class UnaryCallService extends AbstractServiceAdaptor<Proxy.Packet, Proxy
     }
 
     private  Proxy.Packet  httpTransfer(Context context,Proxy.Packet sourcePackage,RouterInfo  routerInfo) throws BaseException{
+
         try {
             String url = routerInfo.getUrl();
             String content = null;
             content = JsonFormat.printer().print(sourcePackage);
-            String resultJson = HttpClientPool.sendPost(url, content, null);
+            String[] split = url.split(":");
+            String resultJson = null;
+            if(split[0].equals("http")){
+                resultJson = HttpClientPool.sendPost(url, content, null);
+            }else{
+                resultJson = new HttpsClient().request(url,"POST", content);
+            }
             logger.info("result json {}", resultJson);
             Proxy.Packet.Builder resultBuilder = Proxy.Packet.newBuilder();
             try {
