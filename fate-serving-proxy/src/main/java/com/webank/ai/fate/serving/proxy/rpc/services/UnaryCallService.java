@@ -122,7 +122,11 @@ public class UnaryCallService extends AbstractServiceAdaptor<Proxy.Packet, Proxy
             if(split[0].equals("http")){
                 resultJson = HttpClientPool.sendPost(url, content, null);
             }else{
-                resultJson = new HttpsClient().request(url,"POST", content);
+                if(routerInfo.isUseSSL()){
+                    resultJson = new HttpsClient(routerInfo.getCaFile(),routerInfo.getCertChainFile(),routerInfo.getPrivateKeyFile()).request(url,"POST",content);
+                }else{
+                    resultJson = new HttpsClient().request(url,"POST", content);
+                }
             }
             logger.info("result json {}", resultJson);
             Proxy.Packet.Builder resultBuilder = Proxy.Packet.newBuilder();

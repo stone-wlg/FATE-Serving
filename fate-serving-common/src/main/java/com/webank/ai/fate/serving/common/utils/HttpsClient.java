@@ -45,26 +45,9 @@ import java.util.Set;
 
 public class HttpsClient {
     public static final String tabs = "%2F", equalSign = "%3D";
-
     public static X509Certificate caX509Certificate;
-    //private static final String caPath = "D:/FATE Chain/test/fdn-ca.crt";
-    //private static final String clientCertPath = "D:/FATE Chain/test/fdn-ca/free-inference-exchange-fdn.webank.com.crt";
-    //private static final String clientKeyPath = "D:/FATE Chain/test/fdn-ca/free-inference-exchange-fdn.webank.com.key";
-
-    // Verifier manager
-    //public static X509TrustManager sunJSSEX509TrustManager;
-    //public static HostnameVerifier hostnameVerifier;
-    //public static X509TrustManager x509TrustManager;
-
-    // SSL Context
-    //public static SSLContext sslContext;
     private final SSLSocketFactory socketFactory;
-
-    // Whether to reuse ssl socket factory
-    //public static final boolean reuseFactory = true;
-    // Whether the request keeps a long connection
     public static final boolean isKeepAlive = false;
-    // Whether the check server certificate state
     public static final boolean checkServer = false;
 
     public HttpsClient() throws KeyManagementException, NoSuchAlgorithmException {
@@ -75,40 +58,8 @@ public class HttpsClient {
         this.socketFactory = getSslFactory(caPath, clientCertPath, clientKeyPath);
     }
 
-    public static void main(String[] args) throws Exception {
-        String data = "{\n" +
-                "  \"header\": {\n" +
-                "    \"task\": {\n" +
-                "      \"model\": {\n" +
-                "        \"namespace\": \"testNamespace\",\n" +
-                "        \"tableName\": \"testTablename\"\n" +
-                "      }\n" +
-                "    },\n" +
-                "    \"src\": {\n" +
-                "      \"name\": \"partnerPartyName\",\n" +
-                "      \"partyId\": \"9999\",\n" +
-                "      \"role\": \"serving\"\n" +
-                "    },\n" +
-                "    \"dst\": {\n" +
-                "      \"name\": \"partyName\",\n" +
-                "      \"partyId\": \"10000\",\n" +
-                "      \"role\": \"serving\"\n" +
-                "    },\n" +
-                "    \"command\": {\n" +
-                "      \"name\": \"uncaryCall\"\n" +
-                "    },\n" +
-                "    \"operator\": \"210\"\n" +
-                "  },\n" +
-                "  \"body\": {\n" +
-                "    \"value\": \"Im15IG5hbWUgaXMgdGVzdCI=\"\n" +
-                "  },\n" +
-                "  \"auth\": {\n" +
-                "    \"version\": \"210\"\n" +
-                "  }\n" +
-                "}";
-        HttpsClient httpsClient = new HttpsClient();
-        String post = httpsClient.request("https://172.16.153.223:8060/unary", "POST", data);
-        System.out.println(post);
+    public HttpsClient(String p12Pth,String pasword) throws Exception {
+        this.socketFactory = getSslFactory(p12Pth,pasword);
     }
 
     public String request(String httpsUrl, String requestMethod, String requestBody) throws Exception {
@@ -157,13 +108,30 @@ public class HttpsClient {
 
     // get ssl factory
     private static SSLSocketFactory getSslFactory(String caPath, String clientCertPath, String clientKeyPath) throws Exception {
-        KeyStore keyStore = getKeyStore(caPath, clientCertPath, clientKeyPath);
+        KeyStore keyStore = KeyStore.getInstance("pkcs12");
+        keyStore.load(null);
+        keyStore.setKeyEntry("chain", importPrivateKey(clientKeyPath), "123456".toCharArray(),
+                new Certificate[]{importCert(clientCertPath), caX509Certificate = ((X509Certificate) importCert(caPath))});
+        // Initialize the ssl context object
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        TrustManager[] tm = {HttpsClient.X509TrustManager2.getInstance(keyStore)};
+        // Load client certificate
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(keyStore, "123456".toCharArray());
+        sslContext.init(kmf.getKeyManagers(), tm, new SecureRandom());
+        // Initialize the factory
+        return sslContext.getSocketFactory();
+    }
+
+    private static SSLSocketFactory getSslFactory(String p12Path,String pwd) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("pkcs12");
+        keyStore.load(new FileInputStream(p12Path),pwd.toCharArray());
         // Initialize the ssl context object
         SSLContext sslContext = SSLContext.getInstance("SSL");
         TrustManager[] tm = {HttpsClient.X509TrustManager2.getInstance(keyStore)};
         // Load client certificate
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-        kmf.init(keyStore, "123456".toCharArray());
+        kmf.init(keyStore, pwd.toCharArray());
         sslContext.init(kmf.getKeyManagers(), tm, new SecureRandom());
         // Initialize the factory
         return sslContext.getSocketFactory();
@@ -177,15 +145,6 @@ public class HttpsClient {
         sslContext.init(null, tm, new SecureRandom());
         // Initialize the factory
         return sslContext.getSocketFactory();
-    }
-
-    // Synthetic certificate keystore
-    private static KeyStore getKeyStore(String caPath, String clientCertPath, String clientKeyPath) throws Exception {
-        KeyStore keyStore = KeyStore.getInstance("pkcs12");
-        keyStore.load(null);
-        keyStore.setKeyEntry("chain", importPrivateKey(clientKeyPath), "123456".toCharArray(),
-                new Certificate[]{importCert(clientCertPath), caX509Certificate = ((X509Certificate) importCert(caPath))});
-        return keyStore;
     }
 
     public static class HostnameVerifier2 implements HostnameVerifier {
